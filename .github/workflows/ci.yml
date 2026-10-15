@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: Core and release package (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        with:
+          version: "0.11.6"
+      - run: uv python install "$UV_PYTHON"
+      - run: uv sync --locked --all-groups --python "$UV_PYTHON"
+      - run: uv run ruff check src examples scripts tests
+      - run: uv run ruff format --check src examples scripts tests
+      - run: uv run mypy src/mcp_auth_bridge examples scripts
+      - run: uv run pytest -q
+      - name: Verify sdist, wheel, and isolated runtime installation
+        run: uv run python -m scripts.verify_release --python "$UV_PYTHON" --report artifacts/release.json
+      - name: Upload safe package verification report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: package-verification-python-${{ matrix.python-version }}
+          path: artifacts/release.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  deterministic-http:
+    name: Deterministic issuer and MCP HTTP acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: core
+    env:
+      UV_PYTHON: "3.12"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        with:
+          version: "0.11.6"
+      - run: uv python install "$UV_PYTHON"
+      - run: uv sync --locked --all-groups --python "$UV_PYTHON"
+      - run: uv run python -m scripts.verify_local_demo --report artifacts/http-acceptance.json
+      - name: Upload safe HTTP evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: http-acceptance
+          path: artifacts/http-acceptance.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  keycloak-browser:
+    name: Keycloak browser OAuth integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: core
+    env:
+      UV_PYTHON: "3.12"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        with:
+          version: "0.11.6"
+      - run: uv python install "$UV_PYTHON"
+      - run: uv sync --locked --all-groups --python "$UV_PYTHON"
+      - run: uv run playwright install --with-deps chromium
+      - run: uv run python -m scripts.verify_oauth_demo --report artifacts/oauth-acceptance.json
+      - name: Upload safe OAuth evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: oauth-acceptance
+          path: artifacts/oauth-acceptance.json
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,140 @@
+name: Security
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: Redacted Git history secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install checksum-verified Gitleaks 8.30.1
+        run: |
+          curl --fail --location --retry 3 --connect-timeout 20 --max-time 120 \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            --output "$RUNNER_TEMP/gitleaks.tar.gz"
+          printf '%s  %s\n' '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb' "$RUNNER_TEMP/gitleaks.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP" gitleaks
+      - name: Scan history without exposing credentials or identities
+        run: |
+          python3 - <<'SCAN'
+          import collections, datetime, json, os, pathlib, re, subprocess
+          temp = pathlib.Path(os.environ["RUNNER_TEMP"])
+          raw = temp / "gitleaks-private.json"
+          findings = None
+          code = -1
+          try:
+              result = subprocess.run(
+                  [str(temp / "gitleaks"), "git", "--redact=100", "--no-banner",
+                   "--log-level", "error", "--report-format", "json", "--report-path", str(raw),
+                   "--log-opts=--all"], capture_output=True, timeout=300, check=False)
+              code = result.returncode
+              findings = json.loads(raw.read_text()) if raw.exists() else None
+          except (OSError, subprocess.TimeoutExpired, ValueError):
+              pass
+          valid = isinstance(findings, list)
+          rules = collections.Counter()
+          for finding in findings if valid else []:
+              rule = finding.get("RuleID", "unknown") if isinstance(finding, dict) else "unknown"
+              rules[rule if isinstance(rule, str) and re.fullmatch(r"[a-zA-Z0-9_-]{1,80}", rule) else "unknown"] += 1
+          passed = code == 0 and valid and not findings
+          report = {"schema": "mab-secret-scan-v1", "revision": os.environ["GITHUB_SHA"],
+                    "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    "versions": {"gitleaks": "8.30.1"}, "passed": passed,
+                    "finding_count": len(findings) if valid else None,
+                    "rules": dict(sorted(rules.items())),
+                    "status": "passed" if passed else "findings_or_scan_failure"}
+          destination = pathlib.Path("artifacts/secret-scan.json")
+          destination.parent.mkdir(exist_ok=True)
+          destination.write_text(json.dumps(report, indent=2) + "\n")
+          print("Secret scan passed." if passed else "Secret scan failed; review the safe summary.")
+          raise SystemExit(0 if passed else 1)
+          SCAN
+      - name: Upload safe secret-scan summary
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: secret-scan
+          path: artifacts/secret-scan.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  runtime-dependencies:
+    name: Runtime dependency audit (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        with:
+          version: "0.11.6"
+      - run: uv python install "$UV_PYTHON"
+      - name: Resolve the actual isolated runtime package set
+        run: uv run --no-project --python "$UV_PYTHON" python -m scripts.verify_release --python "$UV_PYTHON" --report artifacts/audited-runtime.json
+      - name: Audit every installed runtime dependency
+        run: |
+          python3 - <<'SCAN'
+          import datetime, json, os, pathlib, subprocess
+          raw = pathlib.Path(os.environ["RUNNER_TEMP"]) / "dependency-audit-private.json"
+          dependencies = []
+          code = -1
+          try:
+              result = subprocess.run(
+                  ["uv", "tool", "run", "--from", "pip-audit==2.10.1", "pip-audit",
+                   "--strict", "--disable-pip", "--no-deps", "--progress-spinner", "off",
+                   "--format", "json", "--output", str(raw),
+                   "--requirement", "dist/release/runtime-requirements.txt"],
+                  capture_output=True, timeout=300, check=False)
+              code = result.returncode
+              data = json.loads(raw.read_text()) if raw.exists() else {}
+              dependencies = data.get("dependencies", [])
+          except (OSError, subprocess.TimeoutExpired, ValueError):
+              pass
+          skipped = sum("skip_reason" in item for item in dependencies)
+          findings = [{"package": item["name"], "version": item["version"],
+                       "advisory": vuln["id"], "fix_versions": vuln.get("fix_versions", [])}
+                      for item in dependencies for vuln in item.get("vulns", [])]
+          passed = code == 0 and bool(dependencies) and not findings and not skipped
+          report = {"schema": "mab-dependency-audit-v1", "revision": os.environ["GITHUB_SHA"],
+                    "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    "versions": {"pip_audit": "2.10.1", "python_target": os.environ["UV_PYTHON"]},
+                    "passed": passed, "package_count": len(dependencies), "skipped_count": skipped,
+                    "findings": findings, "status": "passed" if passed else "findings_or_scan_failure"}
+          destination = pathlib.Path("artifacts/dependency-audit.json")
+          destination.parent.mkdir(exist_ok=True)
+          destination.write_text(json.dumps(report, indent=2) + "\n")
+          print("Runtime audit passed." if passed else "Runtime audit failed; review the safe summary.")
+          raise SystemExit(0 if passed else 1)
+          SCAN
+      - name: Upload safe runtime audit evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: dependency-audit-python-${{ matrix.python-version }}
+          path: |
+            artifacts/dependency-audit.json
+            artifacts/audited-runtime.json
+          if-no-files-found: warn
+          retention-days: 14

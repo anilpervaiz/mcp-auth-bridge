@@ -1,0 +1,11 @@
+policy:
+  default_scopes:
+    - mcp:use
+  methods:
+    tools/call:
+      require:
+        - mcp:execute
+  tools:
+    sensitive_status:
+      require:
+        - mcp:admin

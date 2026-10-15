@@ -1,0 +1,96 @@
+[project]
+name = "mcp-auth-bridge"
+dynamic = ["version"]
+description = "A small OAuth resource-server boundary for HTTP MCP servers"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "MCP Auth Bridge contributors" }]
+keywords = ["mcp", "oauth", "asgi", "security"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Security",
+]
+dependencies = [
+  "anyio>=4.9",
+  "cryptography>=50.0.2",
+  "httpcore>=1.0.7",
+  "joserfc>=1.4",
+  "PyYAML>=6.0",
+  "starlette>=0.45",
+  "typing-extensions>=4.12",
+  "uvicorn>=0.34",
+]
+
+[project.scripts]
+mcp-auth-bridge = "mcp_auth_bridge.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/anilpervaiz/mcp-auth-bridge"
+Documentation = "https://github.com/anilpervaiz/mcp-auth-bridge#readme"
+Repository = "https://github.com/anilpervaiz/mcp-auth-bridge"
+Issues = "https://github.com/anilpervaiz/mcp-auth-bridge/issues"
+Security = "https://github.com/anilpervaiz/mcp-auth-bridge/security/policy"
+
+[dependency-groups]
+dev = [
+  "mcp==2.3.0",
+  "httpx2>=2.10.0",
+  "pytest>=8.3",
+  "pytest-asyncio>=0.25",
+  "ruff>=0.11",
+  "mypy>=1.15",
+  "playwright==1.63.0",
+]
+
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/mcp_auth_bridge/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_auth_bridge"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src/mcp_auth_bridge",
+  "/pyproject.toml",
+  "/README.md",
+  "/LICENSE",
+  "/NOTICE",
+  "/SECURITY.md",
+  "/CONTRIBUTING.md",
+  "/SUPPORT.md",
+  "/CHANGELOG.md",
+  "/PRIVACY.md",
+  "/docs/architecture.md",
+  "/docs/threat-model.md",
+  "/docs/known-limitations.md",
+  "/docs/provenance.md",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = [".", "src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+mypy_path = "src"
+strict = true
+packages = ["mcp_auth_bridge"]
+
+[[tool.mypy.overrides]]
+module = ["yaml"]
+ignore_missing_imports = true

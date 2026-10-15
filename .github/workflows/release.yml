@@ -1,0 +1,274 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the GitHub alpha (run only on tag v0.1.0a1)
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-alpha
+  cancel-in-progress: false
+
+env:
+  RELEASE_VERSION: "0.1.0a1"
+  RELEASE_TAG: "v0.1.0a1"
+
+jobs:
+  prepare:
+    name: Prepare and verify exact alpha artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    env:
+      UV_PYTHON: "3.12"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Check source version and publication prerequisites
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH: ${{ inputs.publish }}
+          CHECK_SOURCE: "true"
+        run: |
+          python3 - <<'CHECK'
+          import ast, json, os, pathlib, re, subprocess
+
+          def require(condition, reason="Publication prerequisite failed."):
+              if not condition:
+                  raise SystemExit(reason)
+
+          def api(path):
+              result = subprocess.run(["gh", "api", path], capture_output=True, text=True, timeout=30)
+              require(result.returncode == 0, "A publication prerequisite could not be verified.")
+              return json.loads(result.stdout)
+
+          revision = os.environ["GITHUB_SHA"]
+          require(re.fullmatch(r"[0-9a-f]{40}", revision) is not None)
+          if os.environ["CHECK_SOURCE"] == "true":
+              tree = ast.parse(pathlib.Path("src/mcp_auth_bridge/_version.py").read_text())
+              versions = [n.value.value for n in tree.body if isinstance(n, ast.Assign)
+                          and any(isinstance(t, ast.Name) and t.id == "__version__" for t in n.targets)
+                          and isinstance(n.value, ast.Constant) and isinstance(n.value.value, str)]
+              require(versions == [os.environ["RELEASE_VERSION"]], "Package version does not match the alpha tag.")
+              actual = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+              require(actual == revision, "Checked-out source differs from the workflow revision.")
+          if os.environ["PUBLISH"].lower() == "true":
+              repo = os.environ["GITHUB_REPOSITORY"]
+              require(os.environ["GITHUB_REF"] == "refs/tags/" + os.environ["RELEASE_TAG"], "Publication requires the exact version tag.")
+              require(api(f"repos/{repo}")["private"] is False, "Public repository required for free attestations.")
+              require(api(f"repos/{repo}/git/ref/heads/main")["object"]["sha"] == revision, "Tag must match current main.")
+              require(api(f"repos/{repo}/commits/{os.environ['RELEASE_TAG']}")["sha"] == revision, "Release tag changed.")
+              for workflow in ("ci.yml", "security.yml"):
+                  runs = api(f"repos/{repo}/actions/workflows/{workflow}/runs?head_sha={revision}&event=push&branch=main&per_page=100")["workflow_runs"]
+                  runs = [r for r in runs if r["head_sha"] == revision and r["head_branch"] == "main" and r["event"] == "push"]
+                  require(bool(runs) and runs[0]["status"] == "completed" and runs[0]["conclusion"] == "success", "CI and Security must pass for this main revision.")
+          print("Release prerequisites verified.")
+          CHECK
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        with:
+          version: "0.11.6"
+      - run: uv python install "$UV_PYTHON"
+      - run: uv run --no-project --python "$UV_PYTHON" python -m scripts.verify_release --python 3.12 --report artifacts/release.json
+      - name: Audit the exact runtime resolved for this release
+        run: |
+          python3 - <<'CHECK'
+          import json, os, pathlib, subprocess
+          passed = False
+          count = None
+          try:
+              raw = pathlib.Path(os.environ["RUNNER_TEMP"]) / "release-audit-private.json"
+              result = subprocess.run(
+                  ["uv", "tool", "run", "--from", "pip-audit==2.10.1", "pip-audit",
+                   "--strict", "--disable-pip", "--no-deps", "--progress-spinner", "off",
+                   "--format", "json", "--output", str(raw),
+                   "--requirement", "dist/release/runtime-requirements.txt"],
+                  capture_output=True, timeout=300, check=False)
+              dependencies = json.loads(raw.read_text()).get("dependencies", []) if raw.exists() else []
+              count = len(dependencies)
+              passed = result.returncode == 0 and bool(dependencies) and all(not d.get("vulns") and "skip_reason" not in d for d in dependencies)
+          except (OSError, subprocess.TimeoutExpired, ValueError):
+              pass
+          report = {"schema": "mab-release-runtime-audit-v1", "revision": os.environ["GITHUB_SHA"],
+                    "versions": {"pip_audit": "2.10.1"}, "passed": passed, "package_count": count}
+          path = pathlib.Path("artifacts/release-runtime-audit.json")
+          path.parent.mkdir(exist_ok=True)
+          path.write_text(json.dumps(report, indent=2) + "\n")
+          print("Release runtime audit passed." if passed else "Release runtime audit failed.")
+          raise SystemExit(0 if passed else 1)
+          CHECK
+      - name: Validate the exact artifact manifest and checksums
+        run: |
+          python3 - <<'CHECK'
+          import hashlib, json, os, pathlib
+
+          def require(condition):
+              if not condition:
+                  raise SystemExit("Release artifact validation failed.")
+
+          root = pathlib.Path("dist/release")
+          distribution = "mcp_auth_bridge-" + os.environ["RELEASE_VERSION"]
+          members = {distribution + "-py3-none-any.whl", distribution + ".tar.gz",
+                     "runtime-requirements.txt", "runtime-sbom.cdx.json"}
+          require({p.name for p in root.iterdir()} == members | {"release-manifest.json", "SHA256SUMS"})
+          require(all(p.is_file() and not p.is_symlink() for p in root.iterdir()))
+          manifest = json.loads((root / "release-manifest.json").read_text())
+          require(manifest["passed"] is True and manifest["dirty_source"] is False)
+          require(manifest["revision"] == os.environ["GITHUB_SHA"] and manifest["version"] == os.environ["RELEASE_VERSION"])
+          require(manifest["versions"]["python"].startswith("3.12."))
+          require(len(manifest["artifacts"]) == len(members) and {x["filename"] for x in manifest["artifacts"]} == members)
+          for item in manifest["artifacts"]:
+              path = root / item["filename"]
+              require(item["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest() and item["bytes"] == path.stat().st_size)
+          sums = (root / "SHA256SUMS").read_text().splitlines()
+          expected = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in members | {"release-manifest.json"}}
+          require(len(sums) == len(expected) and {line.split("  ", 1)[1]: line.split("  ", 1)[0] for line in sums} == expected)
+          print("Six exact release artifacts verified.")
+          CHECK
+      - name: Store only the six verified artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: verified-alpha
+          path: |
+            dist/release/mcp_auth_bridge-0.1.0a1-py3-none-any.whl
+            dist/release/mcp_auth_bridge-0.1.0a1.tar.gz
+            dist/release/runtime-requirements.txt
+            dist/release/runtime-sbom.cdx.json
+            dist/release/release-manifest.json
+            dist/release/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload safe preparation evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: release-verification
+          path: |
+            artifacts/release.json
+            artifacts/release-runtime-audit.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  publish:
+    name: Attest and publish the GitHub alpha
+    if: inputs.publish
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PUBLISH: "true"
+      CHECK_SOURCE: "false"
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: verified-alpha
+          path: dist/release
+      - name: Recheck tag, main, and successful CI and Security
+        run: |
+          python3 - <<'CHECK'
+          import ast, json, os, pathlib, re, subprocess
+
+          def require(condition, reason="Publication prerequisite failed."):
+              if not condition:
+                  raise SystemExit(reason)
+
+          def api(path):
+              result = subprocess.run(["gh", "api", path], capture_output=True, text=True, timeout=30)
+              require(result.returncode == 0, "A publication prerequisite could not be verified.")
+              return json.loads(result.stdout)
+
+          revision = os.environ["GITHUB_SHA"]
+          require(re.fullmatch(r"[0-9a-f]{40}", revision) is not None)
+          if os.environ["CHECK_SOURCE"] == "true":
+              tree = ast.parse(pathlib.Path("src/mcp_auth_bridge/_version.py").read_text())
+              versions = [n.value.value for n in tree.body if isinstance(n, ast.Assign)
+                          and any(isinstance(t, ast.Name) and t.id == "__version__" for t in n.targets)
+                          and isinstance(n.value, ast.Constant) and isinstance(n.value.value, str)]
+              require(versions == [os.environ["RELEASE_VERSION"]], "Package version does not match the alpha tag.")
+              actual = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+              require(actual == revision, "Checked-out source differs from the workflow revision.")
+          if os.environ["PUBLISH"].lower() == "true":
+              repo = os.environ["GITHUB_REPOSITORY"]
+              require(os.environ["GITHUB_REF"] == "refs/tags/" + os.environ["RELEASE_TAG"], "Publication requires the exact version tag.")
+              require(api(f"repos/{repo}")["private"] is False, "Public repository required for free attestations.")
+              require(api(f"repos/{repo}/git/ref/heads/main")["object"]["sha"] == revision, "Tag must match current main.")
+              require(api(f"repos/{repo}/commits/{os.environ['RELEASE_TAG']}")["sha"] == revision, "Release tag changed.")
+              for workflow in ("ci.yml", "security.yml"):
+                  runs = api(f"repos/{repo}/actions/workflows/{workflow}/runs?head_sha={revision}&event=push&branch=main&per_page=100")["workflow_runs"]
+                  runs = [r for r in runs if r["head_sha"] == revision and r["head_branch"] == "main" and r["event"] == "push"]
+                  require(bool(runs) and runs[0]["status"] == "completed" and runs[0]["conclusion"] == "success", "CI and Security must pass for this main revision.")
+          print("Release prerequisites verified.")
+          CHECK
+      - name: Recheck the downloaded artifact bytes
+        run: |
+          python3 - <<'CHECK'
+          import hashlib, json, os, pathlib
+
+          def require(condition):
+              if not condition:
+                  raise SystemExit("Release artifact validation failed.")
+
+          root = pathlib.Path("dist/release")
+          distribution = "mcp_auth_bridge-" + os.environ["RELEASE_VERSION"]
+          members = {distribution + "-py3-none-any.whl", distribution + ".tar.gz",
+                     "runtime-requirements.txt", "runtime-sbom.cdx.json"}
+          require({p.name for p in root.iterdir()} == members | {"release-manifest.json", "SHA256SUMS"})
+          require(all(p.is_file() and not p.is_symlink() for p in root.iterdir()))
+          manifest = json.loads((root / "release-manifest.json").read_text())
+          require(manifest["passed"] is True and manifest["dirty_source"] is False)
+          require(manifest["revision"] == os.environ["GITHUB_SHA"] and manifest["version"] == os.environ["RELEASE_VERSION"])
+          require(manifest["versions"]["python"].startswith("3.12."))
+          require(len(manifest["artifacts"]) == len(members) and {x["filename"] for x in manifest["artifacts"]} == members)
+          for item in manifest["artifacts"]:
+              path = root / item["filename"]
+              require(item["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest() and item["bytes"] == path.stat().st_size)
+          sums = (root / "SHA256SUMS").read_text().splitlines()
+          expected = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in members | {"release-manifest.json"}}
+          require(len(sums) == len(expected) and {line.split("  ", 1)[1]: line.split("  ", 1)[0] for line in sums} == expected)
+          print("Six exact release artifacts verified.")
+          CHECK
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+        with:
+          subject-path: |
+            dist/release/mcp_auth_bridge-0.1.0a1-py3-none-any.whl
+            dist/release/mcp_auth_bridge-0.1.0a1.tar.gz
+            dist/release/runtime-requirements.txt
+            dist/release/runtime-sbom.cdx.json
+            dist/release/release-manifest.json
+            dist/release/SHA256SUMS
+      - name: Attest runtime dependency inventory
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e
+        with:
+          subject-path: |
+            dist/release/mcp_auth_bridge-0.1.0a1-py3-none-any.whl
+            dist/release/mcp_auth_bridge-0.1.0a1.tar.gz
+          sbom-path: dist/release/runtime-sbom.cdx.json
+      - name: Publish only the six verified alpha assets
+        run: |
+          gh release create "$RELEASE_TAG" \
+            dist/release/mcp_auth_bridge-0.1.0a1-py3-none-any.whl \
+            dist/release/mcp_auth_bridge-0.1.0a1.tar.gz \
+            dist/release/runtime-requirements.txt \
+            dist/release/runtime-sbom.cdx.json \
+            dist/release/release-manifest.json \
+            dist/release/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease \
+            --title "$RELEASE_TAG — self-hosted Python alpha" \
+            --notes 'Self-hosted Python MCP OAuth boundary. Verify the attached checksums, manifest, runtime inventory, and GitHub attestations. Review the tagged README, SECURITY.md, compatibility record, and known limitations before use. Hosted service and PyPI distribution are outside this alpha release.'

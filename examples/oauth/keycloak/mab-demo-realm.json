@@ -1,0 +1,239 @@
+{
+  "realm": "mab-demo",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": false,
+  "accessTokenLifespan": 30,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "ssoSessionIdleTimeout": 600,
+  "ssoSessionMaxLifespan": 3600,
+  "clientSessionIdleTimeout": 600,
+  "clientSessionMaxLifespan": 3600,
+  "roles": {
+    "realm": [
+      {
+        "name": "mcp-admin",
+        "description": "Local demonstration-only permission for the admin MCP tool"
+      }
+    ]
+  },
+  "clientScopes": [
+    {
+      "name": "roles",
+      "description": "Local explicit realm-role claim mapper",
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "foo",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mcp:use",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "include.in.openid.provider.metadata": "true"
+      }
+    },
+    {
+      "name": "mcp:execute",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "include.in.openid.provider.metadata": "true"
+      }
+    },
+    {
+      "name": "mcp:admin",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "include.in.openid.provider.metadata": "true"
+      }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "mab-resource",
+      "name": "MCP Auth Bridge demo resource",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "defaultClientScopes": [],
+      "optionalClientScopes": [],
+      "attributes": {
+        "resource_url": "http://127.0.0.1:8080/mcp"
+      }
+    },
+    {
+      "clientId": "mab-other-resource",
+      "name": "Additional MCP resource-indicator fixture",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "defaultClientScopes": [],
+      "optionalClientScopes": [],
+      "attributes": {
+        "resource_url": "http://127.0.0.1:8080/other-mcp"
+      }
+    },
+    {
+      "clientId": "mab-sdk-client",
+      "name": "Local MCP Auth Bridge SDK demo",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "fullScopeAllowed": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://127.0.0.1:8765/callback"
+      ],
+      "webOrigins": [],
+      "defaultClientScopes": [
+        "roles"
+      ],
+      "optionalClientScopes": [
+        "mcp:use",
+        "mcp:execute",
+        "mcp:admin"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "mab-resource-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "mab-resource",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "mab-other-resource-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "mab-other-resource",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "mab-codex-client",
+      "name": "Local MCP Auth Bridge Codex demo",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "fullScopeAllowed": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://127.0.0.1:8766/callback"
+      ],
+      "webOrigins": [],
+      "defaultClientScopes": [
+        "roles"
+      ],
+      "optionalClientScopes": [
+        "mcp:use",
+        "mcp:execute",
+        "mcp:admin"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "mab-resource-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "mab-resource",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "mab-other-resource-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "mab-other-resource",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "mcp-basic",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "basic@mab.invalid",
+      "firstName": "Demo",
+      "lastName": "Basic",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo-only-basic-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "mcp-admin",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "admin@mab.invalid",
+      "firstName": "Demo",
+      "lastName": "Admin",
+      "realmRoles": [
+        "mcp-admin"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo-only-admin-password",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

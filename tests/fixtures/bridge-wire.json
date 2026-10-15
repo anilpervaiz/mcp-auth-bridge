@@ -1,0 +1,312 @@
+{
+  "schema_version": 1,
+  "protocol_version": "2026-07-28",
+  "profiles": {
+    "python": {
+      "max_request_body_bytes": 1048576
+    },
+    "workers": {
+      "max_request_body_bytes": 65536,
+      "max_echo_input_bytes": 1024
+    }
+  },
+  "cases": [
+    {
+      "id": "tool-list",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 200,
+      "method": "tools/list"
+    },
+    {
+      "id": "tools-call",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "echo"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"},\"name\":\"echo\"}}",
+      "status": 200,
+      "method": "tools/call",
+      "name": "echo"
+    },
+    {
+      "id": "prompts-get",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "prompts/get",
+        "Mcp-Name": "sample"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"prompts/get\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"},\"name\":\"sample\"}}",
+      "status": 200,
+      "method": "prompts/get",
+      "name": "sample"
+    },
+    {
+      "id": "resources-read",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "resources/read",
+        "Mcp-Name": "https://fixture.invalid/readme"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"resources/read\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"},\"uri\":\"https://fixture.invalid/readme\"}}",
+      "status": 200,
+      "method": "resources/read",
+      "name": "https://fixture.invalid/readme"
+    },
+    {
+      "id": "encoded-tool-name",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "=?base64?bmHDr3Zl?="
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"},\"name\":\"naïve\"}}",
+      "status": 200,
+      "method": "tools/call",
+      "name": "naïve"
+    },
+    {
+      "id": "notification",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "notifications/initialized"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"notifications/initialized\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 200,
+      "method": "notifications/initialized"
+    },
+    {
+      "id": "initialize",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "initialize"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 200,
+      "method": "initialize"
+    },
+    {
+      "id": "protocol-header-missing",
+      "headers": {
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 400
+    },
+    {
+      "id": "protocol-header-wrong",
+      "headers": {
+        "MCP-Protocol-Version": "2025-11-25",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 400
+    },
+    {
+      "id": "protocol-metadata-missing",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"params\":{}}",
+      "status": 400
+    },
+    {
+      "id": "protocol-metadata-wrong",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2025-11-25\"}}}",
+      "status": 400
+    },
+    {
+      "id": "method-header-missing",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 400
+    },
+    {
+      "id": "method-header-disagreement",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 400
+    },
+    {
+      "id": "name-header-unexpected",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list",
+        "Mcp-Name": "echo"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 400
+    },
+    {
+      "id": "name-header-missing",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"},\"name\":\"echo\"}}",
+      "status": 400
+    },
+    {
+      "id": "name-header-disagreement",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "other"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"},\"name\":\"echo\"}}",
+      "status": 400
+    },
+    {
+      "id": "name-body-missing",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "echo"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 400
+    },
+    {
+      "id": "encoded-name-invalid-base64",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "=?base64?%%%?="
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"},\"name\":\"echo\"}}",
+      "status": 400
+    },
+    {
+      "id": "encoded-name-invalid-utf8",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "=?base64?/w==?="
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"},\"name\":\"echo\"}}",
+      "status": 400
+    },
+    {
+      "id": "duplicate-json-member",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 400
+    },
+    {
+      "id": "duplicate-escaped-json-member",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"jsonr\\u0070c\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 400
+    },
+    {
+      "id": "duplicate-nested-json-member",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"},\"arbitrary\":{\"a\":1,\"a\":2}}}",
+      "status": 400
+    },
+    {
+      "id": "nonfinite-json-literal",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":NaN,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 400
+    },
+    {
+      "id": "nonfinite-json-exponent",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1e999,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 400
+    },
+    {
+      "id": "root-array",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "[]",
+      "status": 400
+    },
+    {
+      "id": "root-null",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "null",
+      "status": 400
+    },
+    {
+      "id": "jsonrpc-wrong",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":\"1.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 400
+    },
+    {
+      "id": "empty-method",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}}",
+      "status": 400
+    },
+    {
+      "id": "array-params",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"params\":[]}",
+      "status": 400
+    },
+    {
+      "id": "malformed-json",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":",
+      "status": 400
+    },
+    {
+      "id": "excessive-nesting",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"},\"nested\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[0]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}}",
+      "status": 400
+    }
+  ]
+}
