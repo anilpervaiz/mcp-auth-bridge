@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0a2 — release candidate
+
+- Add the CycloneDX UUID serial number required by the pinned GitHub attestation consumer.
+- Check generated inventories with that exact consumer before publication.
+- Preserve the public `v0.1.0a1` source tag. Its package release stopped before publishing assets because SBOM attestation failed.
+
+
 ## 0.1.0a1 — release candidate
 
 First public alpha candidate of the self-hosted Python MCP OAuth boundary.

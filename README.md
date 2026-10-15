@@ -93,13 +93,13 @@ Global, method, and tool scopes accumulate. Generic JWT validation cannot distin
 
 ## Install the release package
 
-The initial version is `0.1.0a1`. Once its matching
+The initial version is `0.1.0a2`. Once its matching
 [GitHub prerelease](https://github.com/anilpervaiz/mcp-auth-bridge/releases) is
 available, verify its artifacts and install the wheel in an isolated tool
 environment. If that release has not been published, use the source checkout above.
 
 ```sh
-uv tool install https://github.com/anilpervaiz/mcp-auth-bridge/releases/download/v0.1.0a1/mcp_auth_bridge-0.1.0a1-py3-none-any.whl
+uv tool install https://github.com/anilpervaiz/mcp-auth-bridge/releases/download/v0.1.0a2/mcp_auth_bridge-0.1.0a2-py3-none-any.whl
 ```
 
 This installs the bridge CLI and runtime dependencies. Demos and acceptance tools require a source checkout with development dependencies. [Artifact verification](docs/provenance.md). PyPI publication is deferred.

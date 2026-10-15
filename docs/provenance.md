@@ -1,6 +1,6 @@
 # Release provenance and verification
 
-The first distribution is the self-hosted Python alpha, `0.1.0a1`. Its version has
+The first distribution is the self-hosted Python alpha, `0.1.0a2`. Its version has
 one source, `src/mcp_auth_bridge/_version.py`; Hatchling and the runtime read it.
 The Git tag must be the same version prefixed by `v`. Package metadata, imported
 version, wheel, and source-distribution metadata must agree.
@@ -24,7 +24,9 @@ and `print-metadata`. No server, browser, or container is started.
 The output contains the wheel, sdist, `runtime-requirements.txt`,
 `runtime-sbom.cdx.json`, `release-manifest.json`, and `SHA256SUMS`. The CycloneDX
 inventory records the packages actually installed for that Python/platform verification; it is not a
-universal lock or a vulnerability result. Runtime requirements remain ranges,
+universal lock or a vulnerability result. Each inventory includes a CycloneDX UUID
+serial number, and release preparation checks it using the pinned GitHub
+attestation consumer on Node 24 before publication. Runtime requirements remain ranges,
 so future installations may resolve differently. The manifest records the revision,
 dirty-source flag, version, checks, and artifact digests. A dirty-source local result is useful for development
 but cannot be published as release evidence. The report and local build information
@@ -77,7 +79,7 @@ workflow succeeds; this document alone does not assert that a release exists.
 Download all checksum-listed assets from the same versioned release, then verify:
 
 ```sh
-gh attestation verify mcp_auth_bridge-0.1.0a1-py3-none-any.whl --repo anilpervaiz/mcp-auth-bridge
+gh attestation verify mcp_auth_bridge-0.1.0a2-py3-none-any.whl --repo anilpervaiz/mcp-auth-bridge
 shasum -a 256 -c SHA256SUMS
 ```
 
@@ -88,7 +90,7 @@ preparation does not claim them. See [GitHub's attestation documentation](https:
 
 ## Publication status and package indexes
 
-`0.1.0a1` is the initial release candidate. Public release status is established
+`0.1.0a2` is the initial release candidate. Public release status is established
 by the matching [GitHub release](https://github.com/anilpervaiz/mcp-auth-bridge/releases)
 and its public workflow results, not by this version number or a local build.
 At snapshot preparation, public CI, attestations, and release download verification
