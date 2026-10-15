@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish the GitHub alpha (run only on tag v0.1.0a1)
+        description: Publish the GitHub alpha (run only on tag v0.1.0a2)
         required: true
         default: false
         type: boolean
@@ -17,8 +17,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RELEASE_VERSION: "0.1.0a1"
-  RELEASE_TAG: "v0.1.0a1"
+  RELEASE_VERSION: "0.1.0a2"
+  RELEASE_TAG: "v0.1.0a2"
 
 jobs:
   prepare:
@@ -134,13 +134,29 @@ jobs:
           require(len(sums) == len(expected) and {line.split("  ", 1)[1]: line.split("  ", 1)[0] for line in sums} == expected)
           print("Six exact release artifacts verified.")
           CHECK
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: "24"
+      - name: Validate inventory with the pinned attestation consumer
+        run: |
+          curl --fail --location --retry 3 --connect-timeout 20 --max-time 120 \
+            https://raw.githubusercontent.com/actions/attest/59d89421af93a897026c735860bf21b6eb4f7b26/src/sbom.ts \
+            --output "$RUNNER_TEMP/attestation-sbom.ts"
+          printf '%s  %s\n' '266f37693d86bfee74d0008944c154aeea62b59002eac18e009e48892bd038b3' "$RUNNER_TEMP/attestation-sbom.ts" | sha256sum --check --strict
+          node --input-type=module - <<'CHECK'
+          import { pathToFileURL } from 'node:url';
+          const { parseSBOMFromPath } = await import(pathToFileURL(process.env.RUNNER_TEMP + '/attestation-sbom.ts'));
+          const sbom = await parseSBOMFromPath('dist/release/runtime-sbom.cdx.json');
+          if (sbom.type !== 'cyclonedx') throw new Error('Unsupported runtime inventory');
+          console.log('Pinned attestation consumer accepted the inventory.');
+          CHECK
       - name: Store only the six verified artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: verified-alpha
           path: |
-            dist/release/mcp_auth_bridge-0.1.0a1-py3-none-any.whl
-            dist/release/mcp_auth_bridge-0.1.0a1.tar.gz
+            dist/release/mcp_auth_bridge-0.1.0a2-py3-none-any.whl
+            dist/release/mcp_auth_bridge-0.1.0a2.tar.gz
             dist/release/runtime-requirements.txt
             dist/release/runtime-sbom.cdx.json
             dist/release/release-manifest.json
@@ -248,8 +264,8 @@ jobs:
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
           subject-path: |
-            dist/release/mcp_auth_bridge-0.1.0a1-py3-none-any.whl
-            dist/release/mcp_auth_bridge-0.1.0a1.tar.gz
+            dist/release/mcp_auth_bridge-0.1.0a2-py3-none-any.whl
+            dist/release/mcp_auth_bridge-0.1.0a2.tar.gz
             dist/release/runtime-requirements.txt
             dist/release/runtime-sbom.cdx.json
             dist/release/release-manifest.json
@@ -258,14 +274,14 @@ jobs:
         uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e
         with:
           subject-path: |
-            dist/release/mcp_auth_bridge-0.1.0a1-py3-none-any.whl
-            dist/release/mcp_auth_bridge-0.1.0a1.tar.gz
+            dist/release/mcp_auth_bridge-0.1.0a2-py3-none-any.whl
+            dist/release/mcp_auth_bridge-0.1.0a2.tar.gz
           sbom-path: dist/release/runtime-sbom.cdx.json
       - name: Publish only the six verified alpha assets
         run: |
           gh release create "$RELEASE_TAG" \
-            dist/release/mcp_auth_bridge-0.1.0a1-py3-none-any.whl \
-            dist/release/mcp_auth_bridge-0.1.0a1.tar.gz \
+            dist/release/mcp_auth_bridge-0.1.0a2-py3-none-any.whl \
+            dist/release/mcp_auth_bridge-0.1.0a2.tar.gz \
             dist/release/runtime-requirements.txt \
             dist/release/runtime-sbom.cdx.json \
             dist/release/release-manifest.json \

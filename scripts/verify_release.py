@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import uuid
 import zipfile
 from datetime import datetime, timezone
 from email.parser import BytesParser
@@ -264,6 +265,7 @@ def verify(python: str, output: Path, report_path: Path) -> None:
             )
             sbom = {
                 "bomFormat": "CycloneDX",
+                "serialNumber": uuid.uuid4().urn,
                 "specVersion": "1.6",
                 "version": 1,
                 "components": [
