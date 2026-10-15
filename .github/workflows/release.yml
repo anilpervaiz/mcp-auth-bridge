@@ -170,6 +170,7 @@ jobs:
       actions: read
       id-token: write
       attestations: write
+      artifact-metadata: write
     env:
       GH_TOKEN: ${{ github.token }}
       PUBLISH: "true"
