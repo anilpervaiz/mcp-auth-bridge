@@ -4,7 +4,9 @@
 
 MCP Auth Bridge checks access tokens, resource audiences, and required scopes before a request reaches your MCP server. Client credentials stop at the bridge. Your existing authorization server handles login and token issuance.
 
-The first public release is self-hosted. There is no hosted account service. The supported transport is MCP **2026-07-28**; check the [compatibility record](docs/compatibility.md) before connecting a client.
+The public alpha is self-hosted. There is no hosted account service. The supported transport is MCP **2026-07-28**; check the [compatibility record](docs/compatibility.md) before connecting a client.
+
+**[Documentation](docs/index.md)** · [Quickstart](docs/quickstart.md) · [Configuration](docs/configuration.md) · [Client setup](docs/client-setup.md) · [Testing](docs/testing.md) · [Troubleshooting](docs/troubleshooting.md)
 
 ## Set it up with your coding agent
 
@@ -74,7 +76,7 @@ uv run mcp-auth-bridge print-metadata \
 
 Use the same arguments with `serve` to start the bridge. Equivalent environment variables are supported; explicit flags take precedence. Defaults bind the bridge to `127.0.0.1:8080` and operations to `127.0.0.1:9090`. For a remote deployment, configure HTTPS termination and the public listener deliberately; keep the upstream and operations listener private.
 
-Production resource and issuer URLs require HTTPS. The optional `--allow-insecure-loopback` exception accepts HTTP only for literal loopback addresses. Configuration checks do not prove issuer availability or correct token issuance; readiness and client acceptance do.
+Production resource and issuer URLs require HTTPS. The optional `--allow-insecure-loopback` exception accepts HTTP for loopback addresses and `localhost`; in that mode all trust-fetch destinations must resolve only to loopback. Configuration checks do not prove issuer availability or correct token issuance; readiness and client acceptance do.
 
 The issuer must provide discoverable trusted keys and signed RS256/ES256 access tokens with the exact issuer/resource and required scopes. By default every call requires `mcp:use`. Add method/tool scopes with `--policy examples/demo/policy.yaml`:
 
@@ -93,10 +95,8 @@ Global, method, and tool scopes accumulate. Generic JWT validation cannot distin
 
 ## Install the release package
 
-The initial version is `0.1.0a2`. Once its matching
-[GitHub prerelease](https://github.com/anilpervaiz/mcp-auth-bridge/releases) is
-available, verify its artifacts and install the wheel in an isolated tool
-environment. If that release has not been published, use the source checkout above.
+The published version is [`0.1.0a2`](https://github.com/anilpervaiz/mcp-auth-bridge/releases/tag/v0.1.0a2).
+Verify its artifacts, then install the wheel in an isolated tool environment:
 
 ```sh
 uv tool install https://github.com/anilpervaiz/mcp-auth-bridge/releases/download/v0.1.0a2/mcp_auth_bridge-0.1.0a2-py3-none-any.whl
@@ -106,9 +106,9 @@ This installs the bridge CLI and runtime dependencies. Demos and acceptance tool
 
 ## Browser sign-in and clients
 
-The optional [Keycloak demo](docs/browser-demo.md) exercises real browser OAuth with the official Python SDK **2.3.0** and separate basic/admin permissions. Its recorded development baseline is distinct from fresh public CI evidence. Only Keycloak uses Docker; the bridge and sample tools run in Python.
+The optional [Keycloak demo](docs/browser-demo.md) exercises real browser OAuth with the official Python SDK **2.3.0** and separate basic/admin permissions. Its headless acceptance passed for the released revision; visible-browser and native Codex checks are recorded separately. Only Keycloak uses Docker; the bridge and sample tools run in Python.
 
-The recorded Codex **0.162.0-alpha.17.2** run requires its experimental `mcp_2026_07_28` feature. Older default transports are rejected. Other coding agents can install and configure the bridge; that does not imply their built-in MCP clients support this protocol. [Client setup and tested versions](docs/compatibility.md).
+The recorded Codex **0.162.0-alpha.17.2** run requires its experimental `mcp_2026_07_28` feature. Older default transports are rejected. Other coding agents can install and configure the bridge; that does not imply their built-in MCP clients support this protocol. [Client setup](docs/client-setup.md) · [Tested versions](docs/compatibility.md).
 
 ## What the boundary enforces
 
