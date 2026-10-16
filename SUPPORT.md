@@ -1,5 +1,7 @@
 # Support
 
+Start with the [documentation](docs/index.md) and [troubleshooting guide](docs/troubleshooting.md).
+
 Use [GitHub issues](https://github.com/anilpervaiz/mcp-auth-bridge/issues) for
 installation problems, reproducible bugs, and feature proposals. Include the
 package version, Python version, operating system, MCP client/version, expected

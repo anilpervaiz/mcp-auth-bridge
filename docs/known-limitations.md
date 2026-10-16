@@ -13,7 +13,8 @@
   deliberately disposable and must never be reused in a deployment.
 - Trusted-key fetching validates public destinations and pins vetted IPs with TLS
   hostname verification. Private enterprise issuer allow-lists are not implemented.
-  Local HTTP requires the explicit literal-loopback exception.
+  Local HTTP requires the explicit loopback exception (loopback IP or `localhost`);
+  that mode also restricts every trust-fetch DNS result to loopback.
 - Access tokens remain usable until their accepted expiration plus configured
   clock tolerance. There is no opaque-token introspection or immediate revocation
   channel. The issuer and upstream remain operator-controlled trust assumptions.

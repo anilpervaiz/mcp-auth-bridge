@@ -11,6 +11,9 @@ contribute, preserve third-party notices, and describe the behavior and evidence
 behind the change. No contributor license agreement is required. Be respectful,
 specific, and constructive in issues and reviews.
 
+Read the [documentation index](docs/index.md) for setup, configuration, and client
+guides, and [testing](docs/testing.md) for the coverage and evidence boundaries.
+
 ## Development
 
 Install `uv` and Python 3.12, clone the repository, and run:

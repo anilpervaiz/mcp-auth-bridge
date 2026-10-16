@@ -1,6 +1,6 @@
 # Release provenance and verification
 
-The first distribution is the self-hosted Python alpha, `0.1.0a2`. Its version has
+The published distribution is the self-hosted Python alpha, `0.1.0a2`. Its version has
 one source, `src/mcp_auth_bridge/_version.py`; Hatchling and the runtime read it.
 The Git tag must be the same version prefixed by `v`. Package metadata, imported
 version, wheel, and source-distribution metadata must agree.
@@ -90,12 +90,18 @@ preparation does not claim them. See [GitHub's attestation documentation](https:
 
 ## Publication status and package indexes
 
-`0.1.0a2` is the initial release candidate. Public release status is established
-by the matching [GitHub release](https://github.com/anilpervaiz/mcp-auth-bridge/releases)
-and its public workflow results, not by this version number or a local build.
-At snapshot preparation, public CI, attestations, and release download verification
-remain unverified until executed. Record those results in the release notes.
+`v0.1.0a2` is [published](https://github.com/anilpervaiz/mcp-auth-bridge/releases/tag/v0.1.0a2)
+from revision `d38d209ef09dbf1deff19f08447989b917fe14ca`. Its
+[CI](https://github.com/anilpervaiz/mcp-auth-bridge/actions/runs/38783462699),
+[Security](https://github.com/anilpervaiz/mcp-auth-bridge/actions/runs/38783462651),
+and [Release](https://github.com/anilpervaiz/mcp-auth-bridge/actions/runs/38784169037)
+workflows passed. Post-publication checks verified downloaded checksums, build and
+SBOM attestations, and clean downloaded-wheel installations. See the
+[dated evidence](testing.md#released-alpha-evidence) for scope and limitations.
+These results apply to that revision, not to an arbitrary later checkout.
 
 PyPI and TestPyPI publication are deferred. No Trusted Publisher, index credential,
 or index installation is required for this alpha; install the reviewed GitHub
 release wheel or use the source checkout.
+
+[Documentation index](index.md) · [Testing](testing.md)

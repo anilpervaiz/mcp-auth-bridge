@@ -36,8 +36,11 @@ uv run python -m scripts.verify_oauth_demo --report artifacts/oauth-acceptance.j
 
 This starts and stops its own services. It verifies basic/admin separation, exact
 resource audiences, changed/unknown resource rejection, two successive refreshes
-using the newest rotated refresh token, immediate replay rejection, and safe
-callback failures. It waits for actual token expiry, so allow several minutes.
+using the newest rotated refresh token, and immediate replay rejection. It waits
+for actual token expiry, so allow several minutes. Callback-negative cases run
+separately in `tests/test_oauth_callback.py`: real-listener lifecycle tests and
+SDK wrong-state/issuer tests using injected callback values. See the
+[testing guide](testing.md#what-the-regressions-check).
 
 The SDK callback is loopback-only on port 8765, with a 180-second absolute login
 deadline. The Codex fixture uses a separate public client and port 8766. Both use
@@ -48,3 +51,5 @@ The image digest is pinned in the launcher and checked during setup. The demo
 requires free ports 8000, 8080, 8180, 8765, 8766, and 9090. It does not repurpose
 unrelated containers. A passing report includes cleanup; an unexecuted visible
 browser or native-client run must stay marked unverified.
+
+[Documentation index](index.md) · [Client setup](client-setup.md) · [Troubleshooting](troubleshooting.md)
